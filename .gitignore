@@ -1,0 +1,37 @@
+# --- Geral ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+backend/.env
+backend/app/core/config.py
+
+# Banco de dados
+*.db
+*.sqlite3
+backend/investimentos.db
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+build/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Docker ---
+.docker/
+tailscale/certs/*

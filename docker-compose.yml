@@ -1,0 +1,28 @@
+services:
+  # Serviço do Backend Python
+  backend:
+    build: ./backend
+    container_name: Financias_Backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    # Carrega as variáveis do arquivo para o ambiente do container
+    env_file:
+      - ./backend/.env
+    # Environment explícito tem prioridade sobre o .env,
+    # mantenha o DATABASE_URL aqui se quiser forçar o caminho do container
+    environment:
+      - DATABASE_URL=sqlite:////app/investimentos.db
+
+  # Serviço do Frontend React
+  frontend:
+    build: ./frontend
+    container_name: Financias_Frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend

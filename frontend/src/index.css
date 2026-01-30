@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #0f172a; /* Cor de fundo escura */
+  color: #f8fafc; /* Texto claro */
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+/* --- ANIMAÇÕES PERSONALIZADAS --- */
+
+/* Animação de deslizar da esquerda para a direita com fade-in */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px); /* Reduzi um pouco para ficar mais sutil no menu */
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  /* Duração de 0.6s com uma curva suave */
+  animation: slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0; /* Começa invisível para garantir que o delay funcione */
+}
+
+/* Delays para efeito cascata (stagger) */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
