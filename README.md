@@ -112,7 +112,7 @@ Diferente de planilhas comuns, este sistema utiliza **lógica FIFO** para cálcu
 1.  **Clone o repositório:**
 
     ```bash
-    git clone [https://github.com/OnlyTachi/personal-finance-manager.git](https://github.com/OnlyTachi/personal-finance-manager.git)
+    git clone https://github.com/OnlyTachi/personal-finance-manager.git
     cd personal-finance-manager
     ```
 
