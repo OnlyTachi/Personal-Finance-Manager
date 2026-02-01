@@ -8,7 +8,7 @@ O sistema possui uma interface Swagger UI embutida, permitindo testar requisiÃ§Ã
 
 Com o backend rodando, acesse:
 
-> **URL:** [http://localhost:8000/docs](https://www.google.com/search?q=http://localhost:8000/docs)
+> **URL:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 

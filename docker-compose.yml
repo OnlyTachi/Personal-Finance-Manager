@@ -1,5 +1,4 @@
 services:
-  # Serviço do Backend Python
   backend:
     build: ./backend
     container_name: Financias_Backend
@@ -7,22 +6,38 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    # Carrega as variáveis do arquivo para o ambiente do container
     env_file:
       - ./backend/.env
-    # Environment explícito tem prioridade sobre o .env,
-    # mantenha o DATABASE_URL aqui se quiser forçar o caminho do container
     environment:
       - DATABASE_URL=sqlite:////app/investimentos.db
 
-  # Serviço do Frontend React
   frontend:
     build: ./frontend
     container_name: Financias_Frontend
-    ports:
-      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    env_file:
+      - ./frontend/.env
     depends_on:
       - backend
+
+  gateway:
+    image: caddy:2-alpine
+    container_name: Financias_Gateway
+    restart: always
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./tailscale/certs:/tailscale/certs:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:

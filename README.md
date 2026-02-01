@@ -22,6 +22,7 @@ Antes de começar, confira os guias detalhados do sistema:
 - 📖 **[Guia do Usuário](docs/USER_GUIDE.md)**: Como usar o Dashboard, Bot Telegram e Recursos de Casal.
 - 🏗️ **[Arquitetura do Sistema](docs/ARCHITECTURE.md)**: Detalhes técnicos, stack e modelagem de dados.
 - 📡 **[Referência da API](docs/API_REFERENCE.md)**: Visão geral dos endpoints do Backend.
+- 🏠 **[Configuração HomeLab](docs/DEPLOY_HOMELAB.md)**: Detalhes específicos sobre o deploy no Acer i3 com Tailscale.
 
 ---
 
@@ -157,7 +158,8 @@ npm run dev
 
 ## 🛡️ Segurança
 
-> [\!WARNING] > **Atenção:** Este projeto foi desenvolvido para **uso pessoal local**.
+> [!WARNING] 
+> Atenção: Este projeto foi desenvolvido para uso pessoal local.
 
 A chave de criptografia (`SECRET_KEY`) presente nos arquivos de configuração padrão deve ser alterada imediatamente caso você pretenda fazer o deploy em um ambiente de produção ou exposto à internet.
 
@@ -165,7 +167,7 @@ A chave de criptografia (`SECRET_KEY`) presente nos arquivos de configuração p
 
 ## 📝 Licença
 
-Este projeto está sob a licença MIT. Consulte o arquivo [LICENSE](https://www.google.com/search?q=LICENSE) para mais detalhes.
+Este projeto está sob a licença MIT. Consulte o arquivo [LICENSE](./LICENSE) para mais detalhes.
 
 <div align="center">
 Feito com 💜 por OnlyTachi
