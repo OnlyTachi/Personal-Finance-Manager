@@ -1,10 +1,3 @@
-# --- Geral ---
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.log
-
 # --- Python / Backend ---
 __pycache__/
 *.py[cod]
@@ -13,7 +6,6 @@ venv/
 .venv/
 env/
 backend/.env
-backend/app/core/config.py
 backend/alembic/*
 backend/alembic.ini
 
