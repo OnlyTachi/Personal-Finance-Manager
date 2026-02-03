@@ -1,26 +1,16 @@
-# Caddyfile.example
-# Renomeie este arquivo para 'Caddyfile' e edite as variáveis antes de rodar.
+:80 {
+    # Opção global para desativar HTTPS automático e evitar erros de certificado
+    auto_https off
 
-# 1. Defina seu domínio (ex: localhost, ou seu-site.com, ou dominio-tailscale)
-seu-dominio-aqui.com {
-
-    # 2. Configuração de HTTPS
-    # Opção A: Certificados Manuais (ex: Tailscale)
-    # Certifique-se de que os arquivos existem e o volume está montado no docker-compose
-    tls /caminho/para/certificado.crt /caminho/para/chave.key
-
-    # Opção B: Automático (Remova a linha 'tls' acima para o Caddy gerar sozinho via Let's Encrypt)
-
-    # 3. Rota do Backend (API)
-    # Redireciona tudo que for /api/* para o container do Python
+    # 1. Rota da API (Backend)
+    # Qualquer requisição começando com /api/ vai para o container Python
     handle /api/* {
         reverse_proxy backend:8000
     }
 
-    # 4. Rota do Frontend (React)
-    # Redireciona todo o resto para o container do Frontend
+    # 2. Rota do Frontend (React)
+    # Todo o resto vai para o container do React
     handle {
-        # Use porta 80 para Produção (Nginx) ou 5173 para Desenvolvimento (Vite)
-        reverse_proxy frontend:80
+        reverse_proxy frontend:5173
     }
 }
