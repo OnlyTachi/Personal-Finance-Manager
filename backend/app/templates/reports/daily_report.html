@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; margin: 0;">
+    <div style="max-width: 500px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 24px; border: 1px solid #334155;">
+        <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px;">
+            <h2 style="color: #3b82f6; margin: 0; font-size: 20px;">Check-up Diário</h2>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Resumo de {{ data.data_referencia }}</p>
+        </div>
+
+        <!-- Resumo Financeiro -->
+        <table style="width: 100%; margin-bottom: 20px;">
+            <tr>
+                <td style="background-color: #0f172a; padding: 12px; border-radius: 8px; text-align: center; width: 48%;">
+                    <span style="color: #94a3b8; font-size: 10px; text-transform: uppercase; display: block;">Saídas Ontem</span>
+                    <span style="color: #ef4444; font-size: 18px; font-weight: bold;">R$ {{ "%.2f"|format(data.total_saidas_ontem) }}</span>
+                </td>
+                <td style="width: 4%;"></td>
+                <td style="background-color: #0f172a; padding: 12px; border-radius: 8px; text-align: center; width: 48%;">
+                    <span style="color: #94a3b8; font-size: 10px; text-transform: uppercase; display: block;">Entradas Ontem</span>
+                    <span style="color: #10b981; font-size: 18px; font-weight: bold;">R$ {{ "%.2f"|format(data.total_entradas_ontem) }}</span>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Gastos por Categoria -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">Gastos do Dia por Categoria</h3>
+        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
+            {% if data.gastos_por_categoria %}
+                {% for cat, val in data.gastos_por_categoria.items() %}
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #1e293b; color: #94a3b8; font-size: 13px;">{{ cat }}</td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #1e293b; color: #f8fafc; font-weight: bold; font-size: 13px; text-align: right;">R$ {{ "%.2f"|format(val) }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan='2' style='padding: 12px 0; color: #64748b; text-align: center; font-size: 13px;'>Nenhum gasto registrado ontem.</td></tr>
+            {% endif %}
+        </table>
+
+        <!-- Contas a Vencer -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">Alertas de Vencimento</h3>
+        {% if data.contas_vencendo %}
+            {% for c in data.contas_vencendo %}
+            <div style="background-color: #0f172a; border: 1px solid #334155; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #f8fafc; font-weight: bold; font-size: 13px;">{{ c.nome }}</span>
+                    <span style="background-color: {{ '#ef4444' if c.is_hoje else '#f59e0b' }}; color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">{{ 'HOJE' if c.is_hoje else 'AMANHÃ' }}</span>
+                </div>
+                <div style="color: #cbd5e1; font-size: 12px; margin-top: 4px;">Valor: <strong>R$ {{ "%.2f"|format(c.valor) }}</strong></div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style='color: #64748b; font-size: 13px; margin: 0;'>Nenhuma conta vencendo hoje ou amanhã!</p>
+        {% endif %}
+
+        <!-- Alertas de Orçamento (se aplicável) -->
+        {% if data.alertas_orcamento %}
+            <h3 style="color: #f8fafc; font-size: 14px; margin-top: 20px; margin-bottom: 8px;">Alertas de Orçamento</h3>
+            {% for a in data.alertas_orcamento %}
+            {% set badge_col = "#ef4444" if a.is_estourado else "#f59e0b" %}
+            <div style="background-color: #0f172a; border-left: 4px solid {{ badge_col }}; padding: 10px 14px; border-radius: 6px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #f8fafc; font-weight: bold; font-size: 12px;">Orçamento: {{ a.categoria }}</span>
+                    <span style="color: {{ badge_col }}; font-size: 11px; font-weight: bold;">{{ 'ESTOURADO' if a.is_estourado else (a.porcentagem ~ '% USADO') }}</span>
+                </div>
+                <div style="color: #94a3b8; font-size: 11px; margin-top: 2px;">
+                    Gasto no mês: R$ {{ "%.2f"|format(a.gastado) }} / Limite: R$ {{ "%.2f"|format(a.limite) }}
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Balanço do Casal -->
+        {% if data.casal_summary %}
+            {% set cs = data.casal_summary %}
+            {% set val = cs.value %}
+            <div style="background-color: #1e293b; border-left: 4px solid #ec4899; padding: 14px; border-radius: 8px; margin-top: 20px;">
+                <h4 style="color: #ec4899; margin: 0 0 6px 0; font-size: 13px; text-transform: uppercase;">Balanço do Casal</h4>
+                <p style="color: {{ '#10b981' if val > 0 else ('#ef4444' if val < 0 else '#3b82f6') }}; margin: 0; font-size: 13px;">
+                    {% if val > 0 %}
+                        <strong>{{ cs.partner_username }}</strong> te deve <strong>R$ {{ "%.2f"|format(val|abs) }}</strong>
+                    {% elif val < 0 %}
+                        Você deve <strong>R$ {{ "%.2f"|format(val|abs) }}</strong> para <strong>{{ cs.partner_username }}</strong>
+                    {% else %}
+                        Contas do casal rigorosamente equilibradas!
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+
+        <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155;">
+            <span style="color: #64748b; font-size: 10px;">Personal Finance Manager</span>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,35 +1,41 @@
-import requests
 import json
 import logging
 import re
-import google.generativeai as genai
-from PIL import Image
-import io
+from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, func, extract
+
 from app.core.config import settings
 from app.modules.cashflow.models import Movimentacao
 from .prompts import build_categorization_prompt
+from app.core.ai.llm.service import OllamaClient
+from app.core.ai.gemini.service import GeminiClient
+from app.core.ai.tools import (
+    AVAILABLE_TOOLS,
+    TOOLS_SCHEMA,
+    build_user_financial_snapshot,
+)
 
 logger = logging.getLogger(__name__)
+gemini_client = GeminiClient()
 
-if settings.GEMINI_API_KEY:
-    genai.configure(api_key=settings.GEMINI_API_KEY)
 
-def get_historical_context_data(db: Session, user_username: str, description: str, additional_context: str = None) -> list:
-    """
-    Busca objetos de transações passadas para usar no prompt.
-    """
+def get_historical_context_data(
+    db: Session, user_username: str, description: str, additional_context: str = None
+) -> list:
     try:
         full_text = f"{description} {additional_context or ''}".strip()
         keywords = re.split(r"\s+", full_text)
-        valid_keywords = [k for k in keywords if len(k) > 3 and k.lower() not in ["pix", "enviado", "transferencia", "compra", "debito"]]
-        
+        valid_keywords = [
+            k
+            for k in keywords
+            if len(k) > 3
+            and k.lower() not in ["pix", "enviado", "transferencia", "compra", "debito"]
+        ]
         if not valid_keywords:
             return []
 
         main_keyword = max(valid_keywords, key=len)
-
         exemplos = (
             db.query(Movimentacao)
             .filter(
@@ -37,8 +43,8 @@ def get_historical_context_data(db: Session, user_username: str, description: st
                 Movimentacao.categoria != "Outros",
                 or_(
                     Movimentacao.descricao.ilike(f"%{main_keyword}%"),
-                    Movimentacao.observacao.ilike(f"%{main_keyword}%")
-                )
+                    Movimentacao.observacao.ilike(f"%{main_keyword}%"),
+                ),
             )
             .order_by(desc(Movimentacao.data))
             .limit(5)
@@ -49,90 +55,42 @@ def get_historical_context_data(db: Session, user_username: str, description: st
         logger.error(f"Erro ao buscar contexto ICL: {e}")
         return []
 
-def call_ollama(url: str, model: str, prompt: str, timeout: tuple) -> dict:
-    """Função genérica para chamar API do Ollama"""
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "format": "json",
-        "options": {
-            "temperature": 0.1,
-            "num_predict": 128,
-        },
-    }
-    response = requests.post(url, json=payload, timeout=timeout)
-    response.raise_for_status()
-    # Tenta limpar o JSON se a LLM mandou texto extra
-    content = response.json()["response"]
-    if "```json" in content:
-        content = content.split("```json")[1].split("```")[0]
-    return json.loads(content)
 
 def categorize_transaction_ai(
-    db: Session, user_username: str, description: str, value: float, additional_context: str = None
+    db: Session,
+    user_username: str,
+    description: str,
+    value: float,
+    additional_context: str = None,
 ) -> str:
-    """
-    Orquestrador de Categorização (Texto)
-    """
-    # 1. Busca histórico (ICL)
-    history_examples = get_historical_context_data(db, user_username, description, additional_context)
-    
-    # 2. Constrói o Prompt Otimizado
-    prompt = build_categorization_prompt(description, value, additional_context or "", history_examples)
-
-    # 3. Tenta Ollama Remoto (Tier 2)
+    history_examples = get_historical_context_data(
+        db, user_username, description, additional_context
+    )
+    prompt = build_categorization_prompt(
+        description, value, additional_context or "", history_examples
+    )
     try:
-        result = call_ollama(
-            settings.OLLAMA_WORKER_URL,
-            settings.OLLAMA_WORKER_MODEL,
-            prompt,
-            timeout=(0.5, 10.0),
-        )
+        result = OllamaClient.generate(prompt=prompt)
         cat = result.get("categoria")
         if cat:
-            logger.info(f"🚀 GPU Success: {description} -> {cat}")
+            logger.info(f"  [AI Success] {description} -> {cat}")
             return cat
     except Exception as e:
-        logger.warning(f"⚠️ GPU Falhou: {e}. Tentando Local...")
-
-    # 4. Tenta Ollama Local (Tier 3)
-    try:
-        result = call_ollama(
-            settings.OLLAMA_LOCAL_URL,
-            settings.OLLAMA_LOCAL_MODEL,
-            prompt,
-            timeout=(None, 60.0),
-        )
-        cat = result.get("categoria")
-        if cat:
-            logger.info(f"✅ CPU Success: {description} -> {cat}")
-            return cat
-    except Exception as e:
-        logger.error(f"❌ Erro Fatal IA Local: {e}")
-
+        logger.error(f"  [AI Error] Falha ao categorizar: {e}")
     return None
 
+
 def analyze_receipt_gemini(image_bytes: bytes) -> dict:
-    if not settings.GEMINI_API_KEY:
-        return None
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash-preview-09-2025")
-        image = Image.open(io.BytesIO(image_bytes))
-        prompt = """
-        Analise este comprovante. Extraia:
-        1. Nome do estabelecimento (descricao).
-        2. Valor total (valor).
-        3. Data (data YYYY-MM-DD).
-        4. Categoria sugerida (categoria).
-        Retorne JSON.
-        """
-        response = model.generate_content([prompt, image])
-        text_response = response.text.replace("```json", "").replace("```", "").strip()
-        return json.loads(text_response)
-    except Exception as e:
-        logger.error(f"Erro Gemini Vision: {e}")
-        return None
+    prompt = """
+    Analise este comprovante. Extraia:
+    1. Nome do estabelecimento (descricao).
+    2. Valor total (valor).
+    3. Data (data YYYY-MM-DD).
+    4. Categoria sugerida (categoria).
+    Retorne JSON.
+    """
+    return gemini_client.analyze_image(image_bytes, prompt)
+
 
 def interpret_chat_intent(question: str) -> dict:
     prompt = f"""
@@ -140,15 +98,49 @@ def interpret_chat_intent(question: str) -> dict:
     Pergunta: "{question}"
     JSON Esperado: {{ "keywords": ["..."], "date_filter": "current_month|last_month|all_time" }}
     """
-    if settings.GEMINI_API_KEY:
-        try:
-            model = genai.GenerativeModel("gemini-2.5-flash-preview-09-2025")
-            response = model.generate_content(prompt)
-            text = response.text.replace("```json", "").replace("```", "").strip()
-            return json.loads(text)
-        except Exception: pass
-    
+    result = gemini_client.generate_text_json(prompt)
+    if result:
+        return result
     return {
         "keywords": [question.replace("quanto gastei", "").strip()],
-        "date_filter": "current_month"
+        "date_filter": "current_month",
     }
+
+
+def process_assistant_chat(db: Session, user_username: str, user_message: str) -> str:
+    snapshot = build_user_financial_snapshot(db, user_username)
+    system_instruction = f"""Você é o Assistente Financeiro Pessoal do Personal Finance Manager. CONTEXTO ATUAL DO USUÁRIO (SNAPSHOT): {json.dumps(snapshot, ensure_ascii=False, indent=2)} REGRAS: 1. Responda diretamente se a informação estiver no SNAPSHOT. 2. Se precisar consultar um histórico específico de loja ou ticker que não está no snapshot, use as TOOLS. 3. Formate valores no padrão R$ X.XXX,XX."""
+
+    messages = [
+        {"role": "system", "content": system_instruction},
+        {"role": "user", "content": user_message},
+    ]
+    try:
+        res_data = OllamaClient.chat(messages=messages, tools=TOOLS_SCHEMA)
+        message_obj = res_data.get("message", {})
+        tool_calls = message_obj.get("tool_calls", [])
+
+        if tool_calls:
+            messages.append(message_obj)
+            for call in tool_calls:
+                func_name = call.get("function", {}).get("name")
+                func_args = call.get("function", {}).get("arguments", {})
+
+                if func_name in AVAILABLE_TOOLS:
+                    tool_res = AVAILABLE_TOOLS[func_name](
+                        db, user_username, **func_args
+                    )
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "content": json.dumps(tool_res, ensure_ascii=False),
+                        }
+                    )
+
+            second_res = OllamaClient.chat(messages=messages)
+            return second_res.get("message", {}).get("content", "")
+
+        return message_obj.get("content", "")
+    except Exception as e:
+        logger.error(f"Erro no chat assistente: {e}")
+        return "Desculpe, falha ao conectar com o serviço de inteligência artificial no momento."

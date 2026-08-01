@@ -3,7 +3,7 @@ services:
     build: ./backend
     container_name: Financias_Backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app
     env_file:
@@ -23,20 +23,21 @@ services:
       - backend
 
   gateway:
-    image: caddy:2-alpine
-    container_name: Financias_Gateway
-    restart: always
-    ports:
-      - "8080:80"
-      - "8443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-      - ./tailscale/certs:/tailscale/certs:ro
-    depends_on:
-      - backend
-      - frontend
+      image: caddy:2-alpine
+      container_name: Financias_Gateway
+      restart: always
+      ports:
+        - "80:80"
+        - "443:443"
+        - "443:443/udp"
+      volumes:
+        - ./Caddyfile:/etc/caddy/Caddyfile
+        - caddy_data:/data
+        - caddy_config:/config
+        - ./tailscale/certs:/tailscale/certs:ro
+      depends_on:
+        - backend
+        - frontend
 
 volumes:
   caddy_data:

@@ -4,11 +4,11 @@ Este documento detalha a infraestrutura personalizada para rodar o **Personal Fi
 
 ## 🛠️ Especificações do Host
 
-* **Hardware:** Intel i3-6006U | 8GB RAM
-* **SO:** Ubuntu Server 24.04 LTS
-* **Rede:** Tailscale para acesso remoto seguro e gestão de certificados SSL.
+- **Hardware:** Intel i3-6006U | 8GB RAM
+- **SO:** Ubuntu Server 24.04 LTS
+- **Rede:** Tailscale para acesso remoto seguro e gestão de certificados SSL.
 
-*Para saber mais do hardware, aperte [aqui](https://github.com/OnlyTachi/OnlyTachi/blob/main/SETUP.md)*
+_Para saber mais do meu hardware, aperte [aqui](https://github.com/OnlyTachi/OnlyTachi/blob/main/SETUP.md)_
 
 ---
 
@@ -18,12 +18,12 @@ Para evitar conflitos com outros serviços do HomeLab (como Jellyfin), o sistema
 
 ### Mapeamento de Portas
 
-| Serviço | Porta Interna (Docker) | Porta Host (Acer) | Acesso Tailnet |
-| --- | --- | --- | --- |
-| **Caddy (HTTP)** | 80 | 8080 | Automático via Proxy |
-| **Caddy (HTTPS)** | 443 | 8443 | `https://dominio:443` |
-| **Backend** | 8000 | 8000 | `/api/*` |
-| **Frontend** | 5173 | 5173 | Redirecionado pelo Caddy |
+| Serviço           | Porta Interna (Docker) | Porta Host (Acer) | Acesso Tailnet           |
+| ----------------- | ---------------------- | ----------------- | ------------------------ |
+| **Caddy (HTTP)**  | 80                     | 8080              | Automático via Proxy     |
+| **Caddy (HTTPS)** | 443                    | 8443              | `https://dominio:443`    |
+| **Backend**       | 8000                   | 8000              | `/api/*`                 |
+| **Frontend**      | 5173                   | 5173              | Redirecionado pelo Caddy |
 
 ---
 
@@ -60,21 +60,20 @@ VITE_ALLOWED_HOST=tachi-server.example.bol.ts.net
 **Arquivo `vite.config.js`:**
 
 ```javascript
-import { defineConfig, loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, process.cwd(), "");
   return {
     plugins: [react()],
     server: {
       allowedHosts: [env.VITE_ALLOWED_HOST],
       host: true,
-      port: 5173
-    }
-  }
-})
-
+      port: 5173,
+    },
+  };
+});
 ```
 
 ### 3. O "Pulo do Gato": Tailscale Serve (TCP Mode)
@@ -115,16 +114,16 @@ tachi-server.example.bol.ts.net:443 {
 
 ## 🚦 Comandos de Manutenção
 
-| Ação | Comando |
-| --- | --- |
-| **Status da Ponte** | `tailscale serve status` |
-| **Logs do Gateway** | `docker logs -f Financias_Gateway` |
-| **Reiniciar Stack** | `docker compose down && docker compose up -d` |
-| **Liberar Firewall** | `sudo ufw allow 8443/tcp` |
+| Ação                 | Comando                                       |
+| -------------------- | --------------------------------------------- |
+| **Status da Ponte**  | `tailscale serve status`                      |
+| **Logs do Gateway**  | `docker logs -f Financias_Gateway`            |
+| **Reiniciar Stack**  | `docker compose down && docker compose up -d` |
+| **Liberar Firewall** | `sudo ufw allow 8443/tcp`                     |
 
 > [!IMPORTANT]
 > Se o acesso externo falhar, verifique se o processo `tailscale serve` não foi encerrado. O uso da flag `--bg` é obrigatório para persistência.
 
 ---
 
-*Documentação feita para o projeto Finanças - **Fevereiro 2026***
+\*Documentação feita para o projeto Finanças - **Fevereiro 2026\***

@@ -16,14 +16,18 @@ backend/.env
 backend/app/core/config.py
 backend/alembic/*
 backend/alembic.ini
+locustfile.py
 
 # Banco de dados
 *.db
 *.sqlite3
 backend/investimentos.db
+backend/investimentos.db-shm
+backend/investimentos.db-wal
 
 # --- Node / Frontend ---
 node_modules/
+.node_modules/
 dist/
 build/
 .env.local

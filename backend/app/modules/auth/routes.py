@@ -139,3 +139,11 @@ def change_user_password(
 
     service.change_password(db, current_user.username, payload.password)
     return {"message": "Senha alterada com sucesso"}
+
+
+@router.post("/discord/generate-code")
+def generate_discord_link_code(
+    db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)
+):
+    code = service.generate_discord_code(db, current_user.username)
+    return {"code": code}

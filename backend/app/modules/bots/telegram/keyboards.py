@@ -1,32 +1,36 @@
-def build_categorization_prompt(description: str, value: float, context: str, history_examples: list) -> str:
-    # Formata exemplos históricos para "ensinar" a IA o estilo do usuário (Few-Shot)
-    examples_text = ""
-    if history_examples:
-        examples_text = "Exemplos de como este usuário categoriza:\n"
-        for ex in history_examples:
-            # ex deve ser um dicionário ou objeto Movimentacao
-            detalhe = f" ({ex.observacao})" if hasattr(ex, 'observacao') and ex.observacao else ""
-            desc = getattr(ex, 'descricao', '')
-            val = getattr(ex, 'valor', 0)
-            cat = getattr(ex, 'categoria', 'Outros')
-            examples_text += f"- Entrada: '{desc}{detalhe}' (R$ {abs(val):.2f}) -> Categoria: {cat}\n"
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-    return f"""
-    Você é um assistente financeiro especialista em categorização de despesas no Brasil.
-    
-    SUA MISSÃO: Classificar a transação financeira abaixo em uma categoria padrão.
-    
-    REGRA DE OURO: Responda APENAS um JSON válido. Não escreva markdown, não explique nada. Apenas JSON.
-    
-    Categorias Válidas: [Alimentação, Transporte, Moradia & Contas, Lazer & Assinaturas, Saúde, Compras, Investimentos, Salário & Renda, Transferências, Educação]
 
-    {examples_text}
-    
-    ---
-    NOVA TRANSAÇÃO PARA ANALISAR:
-    Descrição: "{description}"
-    Contexto Extra (Histórico/Detalhes): "{context}"
-    Valor: R$ {value:.2f}
-    
-    Responda no formato: {{"categoria": "Sua Escolha"}}
-    """
+def build_expense_keyboard(mov_id: str, is_shared: bool) -> InlineKeyboardMarkup:
+    """Cria o teclado inline padrão logo após o registro de uma despesa no Telegram."""
+    keyboard = [
+        [
+            InlineKeyboardButton("❌ Desfazer", callback_data=f"del_{mov_id}"),
+            InlineKeyboardButton("🏷️ Categoria", callback_data=f"chgcat_{mov_id}"),
+        ],
+        [
+            InlineKeyboardButton(
+                "💔 Desmarcar Casal" if is_shared else "💑 Dividir c/ Casal",
+                callback_data=f"toggle_shared_{mov_id}",
+            )
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def build_category_selection_keyboard(mov_id: str) -> InlineKeyboardMarkup:
+    """Cria um teclado com opções rápidas de categorias principais."""
+    cats = ["Alimentação", "Transporte", "Lazer", "Mercado", "Outros"]
+    keyboard = []
+    row = []
+
+    for c in cats:
+        row.append(InlineKeyboardButton(c, callback_data=f"setcat_{mov_id}_{c}"))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+
+    if row:
+        keyboard.append(row)
+
+    return InlineKeyboardMarkup(keyboard)

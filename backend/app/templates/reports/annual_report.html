@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; margin: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 24px; border: 1px solid #334155;">
+        <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px;">
+            <h2 style="color: #38bdf8; margin: 0; font-size: 20px;">Relatório Anual e Consolidado IRPF</h2>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Ano-Calendário: {{ data.ano }}</p>
+        </div>
+
+        <!-- Retrospectiva -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">1. Retrospectiva Financeira</h3>
+        <div style="background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 4px 0; color: #cbd5e1;">Total Recebido: <strong style="color: #10b981;">R$ {{ "%.2f"|format(data.retrospectiva.receitas_totais) }}</strong></p>
+            <p style="margin: 4px 0; color: #cbd5e1;">Total Gasto: <strong style="color: #ef4444;">R$ {{ "%.2f"|format(data.retrospectiva.despesas_totais) }}</strong> (Média: R$ {{ "%.2f"|format(data.retrospectiva.media_gastos_mensal) }}/mês)</p>
+            <p style="margin: 4px 0; color: #cbd5e1;">Total Economizado: <strong style="color: #3b82f6;">R$ {{ "%.2f"|format(data.retrospectiva.total_economizado) }} ({{ data.retrospectiva.taxa_poupanca_pct }}%)</strong></p>
+        </div>
+
+        <!-- Consolidado IRPF -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">2. Declaração IRPF (Bens & Direitos em 31/12)</h3>
+        <table style="width: 100%; margin-bottom: 16px; border-collapse: collapse;">
+            {% for item in data.irpf.saldos_31_12 %}
+            <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #1e293b; color: #cbd5e1; font-size: 13px;">
+                    {{ item.nome }} ({{ item.ticker or item.categoria }})
+                </td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #1e293b; color: #f8fafc; font-weight: bold; font-size: 13px; text-align: right;">
+                    R$ {{ "%.2f"|format(item.saldo_31_12) }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <div style="background-color: #0f172a; padding: 12px; border-radius: 8px;">
+            <p style="margin: 4px 0; color: #cbd5e1;">Rendimentos Realizados no Ano: <strong>R$ {{ "%.2f"|format(data.irpf.rendimento_realizado_total) }}</strong></p>
+            <p style="margin: 4px 0; color: #cbd5e1;">Imposto de Renda Pago/Retido: <strong>R$ {{ "%.2f"|format(data.irpf.ir_pago_total) }}</strong></p>
+        </div>
+    </div>
+</body>
+</html>

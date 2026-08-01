@@ -231,66 +231,7 @@ def refresh_prices(
     return res
 
 
-# --- CASAL / COMPARTILHADO ---
-
-
-@router.get("/couple/summary")
-def get_couple_summary(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
-    # Verifica se o usuário tem parceiro configurado
-    if not current_user.partner_id:
-        return {"status": "no_partner"}
-
-    # Verifica se o parceiro também adicionou este usuário (Link Mútuo)
-    # Isso garante privacidade: Só mostra dados se ambos concordarem
-    partner = db.query(User).filter(User.username == current_user.partner_id).first()
-
-    if not partner:
-        return {"status": "partner_not_found"}
-
-    if partner.partner_id != current_user.username:
-        return {"status": "pending_approval", "partner_name": current_user.partner_id}
-
-    # Se conexão for mútua, retorna dados agregados
-    data = service.get_couple_dashboard_data(
-        db, current_user.username, partner.username
-    )
-    return {"status": "linked", "data": data}
-
-
-@router.get("/couple/history")
-def get_couple_history_route(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
-    # Mesma verificação de segurança do summary
-    if not current_user.partner_id:
-        raise HTTPException(status_code=400, detail="Sem parceiro.")
-
-    partner = db.query(User).filter(User.username == current_user.partner_id).first()
-    if not partner or partner.partner_id != current_user.username:
-        raise HTTPException(status_code=403, detail="Vínculo não confirmado.")
-
-    return service.get_couple_history_data(db, current_user.username, partner.username)
-
-
 # --- GOALS (METAS) ---
-
-
-@router.get("/couple/goals", response_model=List[schemas.Goal])
-def get_goals(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
-    partner_id = None
-    # Verifica se tem parceiro vinculado para mostrar as metas dele também
-    if current_user.partner_id:
-        partner = (
-            db.query(User).filter(User.username == current_user.partner_id).first()
-        )
-        if partner and partner.partner_id == current_user.username:
-            partner_id = partner.username
-
-    return service.get_couple_goals(db, current_user.username, partner_id)
 
 
 @router.post("/goals", response_model=schemas.Goal)
@@ -325,3 +266,42 @@ def delete_goal(
         return service.delete_goal(db, goal_id, current_user.username)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# --- Atualizar Ativos ---
+@router.put("/assets/{asset_id}", response_model=schemas.Ativo)
+def update_asset_route(
+    asset_id: str,
+    asset_update: schemas.AtivoUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    asset = service.get_asset_by_id(db, asset_id)
+    if not asset or asset.owner_id != current_user.username:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    return service.update_asset(db, asset_id, asset_update)
+
+
+# --- Atualizar Trasacoes ---
+@router.put("/transactions/{transaction_id}", response_model=schemas.Transacao)
+def update_transaction_route(
+    transaction_id: str,
+    tx_update: schemas.TransacaoUpdate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    t = db.query(models.Transacao).filter(models.Transacao.id == transaction_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+
+    asset = service.get_asset_by_id(db, t.ativo_id)
+    if not asset or asset.owner_id != current_user.username:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    updated_tx = service.update_transaction(db, transaction_id, tx_update)
+    background_tasks.add_task(
+        history_service.rebuild_user_history, db, current_user.username
+    )
+    return updated_tx

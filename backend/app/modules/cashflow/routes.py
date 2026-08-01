@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Body
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    UploadFile,
+    File,
+    Body,
+    status,
+)
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.db.session import get_db
@@ -54,66 +63,39 @@ def get_summary(
     return service.get_monthly_summary(db, current_user.username, month, year)
 
 
-@router.post("/upload/preview", response_model=List[schemas.TransactionPreview])
-async def upload_file_preview(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Rota legada para OFX/PDF que já retorna as transações processadas.
-    """
-    content = await file.read()
-    try:
-        preview_data = service.process_file_preview(content, file.filename)
-        return preview_data
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+# --- ENDPOINTS DE TETOS ORÇAMENTÁRIOS ---
 
 
-# --- NOVAS ROTAS DE MAPEAMENTO ---
-
-
-@router.post("/upload/analyze", response_model=schemas.AnalyzeResponse)
-async def analyze_file_route(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Passo 1: Recebe o arquivo, salva temporariamente e retorna os cabeçalhos.
-    """
-    try:
-        content = await file.read()
-        return service.analyze_csv_headers(content, file.filename)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/upload/map", response_model=List[schemas.TransactionPreview])
-def map_file_route(
-    payload: schemas.MapRequest,
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Passo 2: Aplica o mapeamento de colunas no arquivo temporário.
-    """
-    try:
-        return service.apply_csv_mapping(payload.file_token, payload.mapping)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/import/bulk")
-def import_bulk_transactions(
-    payload: schemas.BulkImportRequest,
+@router.get("/budgets", response_model=List[schemas.BudgetLimitResponse])
+def list_budgets(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Recebe a lista final confirmada pelo usuário e salva no banco.
-    """
-    try:
-        return service.create_bulk_movimentacoes(
-            db, payload.transactions, current_user.username
+    """Lista todos os limites de orçamento personalizados do usuário."""
+    return service.get_user_budgets(db, current_user.username)
+
+
+@router.post("/budgets", response_model=schemas.BudgetLimitResponse)
+def upsert_budget(
+    budget_in: schemas.BudgetLimitCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Cria ou atualiza o teto orçamentário para uma determinada categoria."""
+    return service.upsert_user_budget(db, current_user.username, budget_in)
+
+
+@router.delete("/budgets/{budget_id}")
+def delete_budget(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove o limite personalizado de uma categoria (retornando ao fallback se houver)."""
+    success = service.delete_user_budget(db, current_user.username, budget_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Orçamento não encontrado.",
         )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return {"message": "Limite de orçamento removido com sucesso."}

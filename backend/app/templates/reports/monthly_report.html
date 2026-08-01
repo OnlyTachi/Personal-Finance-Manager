@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; margin: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 24px; border: 1px solid #334155;">
+        <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px;">
+            <h2 style="color: #38bdf8; margin: 0; font-size: 20px;">Relatório Mensal de Fechamento</h2>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Período: {{ data.periodo }}</p>
+        </div>
+
+        <!-- Visão Geral de Fluxo de Caixa -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">1. Fluxo de Caixa</h3>
+        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse; background-color: #0f172a; padding: 12px; border-radius: 8px;">
+            <tr><td style="padding: 6px; color: #94a3b8;">Receitas:</td><td style="text-align: right; color: #10b981; font-weight: bold;">R$ {{ "%.2f"|format(data.fluxo_caixa.receitas) }}</td></tr>
+            <tr><td style="padding: 6px; color: #94a3b8;">Despesas:</td><td style="text-align: right; color: #ef4444; font-weight: bold;">R$ {{ "%.2f"|format(data.fluxo_caixa.despesas) }}</td></tr>
+            <tr><td style="padding: 6px; color: #94a3b8;">Aportes:</td><td style="text-align: right; color: #3b82f6; font-weight: bold;">R$ {{ "%.2f"|format(data.fluxo_caixa.aportes) }}</td></tr>
+            <tr><td style="padding: 6px; color: #94a3b8;">Saldo Livre:</td><td style="text-align: right; color: #f8fafc; font-weight: bold;">R$ {{ "%.2f"|format(data.fluxo_caixa.saldo_livre) }}</td></tr>
+        </table>
+
+        <!-- Evolução do Patrimônio Líquido -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">2. Evolução Patrimonial</h3>
+        <div style="background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 4px 0; color: #cbd5e1;">Inicial: <strong>R$ {{ "%.2f"|format(data.patrimonio.inicial) }}</strong> | Final: <strong>R$ {{ "%.2f"|format(data.patrimonio.final) }}</strong></p>
+            <p style="margin: 4px 0; color: #10b981;">Variação: <strong>R$ {{ "%.2f"|format(data.patrimonio.variacao_absoluta) }} ({{ data.patrimonio.variacao_percentual }}%)</strong></p>
+        </div>
+
+        <!-- Rentabilidade dos Investimentos -->
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">3. Investimentos & Rentabilidade</h3>
+        <div style="background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 4px 0; color: #cbd5e1;">Rentabilidade Bruta: <strong>{{ data.investimentos.rentabilidade_bruta_pct }}%</strong></p>
+            <p style="margin: 4px 0; color: #cbd5e1;">Rentabilidade Líquida Estimada: <strong>{{ data.investimentos.rentabilidade_liquida_pct }}%</strong></p>
+        </div>
+
+        <!-- Fechamento Casal -->
+        {% if data.casal %}
+            {% set val = data.casal.value %}
+            <div style="background-color: #1e293b; border: 1px solid #ec4899; padding: 14px; border-radius: 12px; margin-top: 20px;">
+                <h4 style="color: #ec4899; margin: 0 0 6px 0; font-size: 13px; text-transform: uppercase;">Fechamento de Contas do Casal</h4>
+                <p style="color: #f8fafc; margin: 0; font-size: 13px;">
+                    {% if val > 0 %}
+                        <strong>{{ data.casal.partner_username }}</strong> te deve <strong>R$ {{ "%.2f"|format(val|abs) }}</strong>
+                    {% elif val < 0 %}
+                        Você deve <strong>R$ {{ "%.2f"|format(val|abs) }}</strong> para <strong>{{ data.casal.partner_username }}</strong>
+                    {% else %}
+                        Acerto de contas zerado!
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.modules.auth.dependencies import get_current_user
 from app.modules.auth.models import User
-from . import service, schemas, indices_service
+from . import service, schemas
+from app.core import market_data
 
 router = APIRouter()
 
@@ -88,4 +89,4 @@ def get_indices_economicos(current_user: User = Depends(get_current_user)):
     Retorna as taxas atuais de mercado (Selic, CDI, IPCA)
     obtidas do Banco Central.
     """
-    return indices_service.get_market_indices()
+    return market_data.get_market_indices()

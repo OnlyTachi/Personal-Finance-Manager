@@ -68,9 +68,11 @@ Diferente de planilhas comuns, este sistema utiliza **lógica FIFO** para cálcu
 
 ### 🤖 Automação de Backend
 
-- **Scheduler Integrado:** Tarefas automáticas às 09:00 e 18:00.
-- **Auto-Correção do CDI:** Monitora o Banco Central e atualiza a taxa Selic globalmente.
-- **Snapshots:** Gera histórico diário do patrimônio para gráficos de evolução.
+- **Engine de IA Híbrida:**
+  1. _Tier 1 (Nuvem):_ Gemini 2.5 Flash para visão OCR de notas/comprovantes.
+  2. _Tier 2 (Worker Remoto):_ Ollama (`qwen2.5:3b`) para tarefas de texto complexas.
+  3. _Tier 3 (Local):_ Ollama (`phi3.5:latest`) para execução autônoma offline.
+- **Scheduler Integrado:** Atualização diária de mercado (09:00 e 18:00) e disparo automatizado de relatórios diários, semanais e mensais.
 
 ### 🧮 Calculadoras Financeiras
 
@@ -84,13 +86,13 @@ Diferente de planilhas comuns, este sistema utiliza **lógica FIFO** para cálcu
 
 ### Backend
 
-| Tech                      | Descrição                                       |
-| :------------------------ | :---------------------------------------------- |
-| **Python 3.12 + FastAPI** | Performance assíncrona e tipagem forte.         |
-| **APScheduler**           | Agendamento de tarefas complexas em background. |
-| **Python-Telegram-Bot**   | Interface de chat para registro rápido.         |
-| **SQLAlchemy**            | ORM robusto para banco de dados SQLite.         |
-| **Pandas / Numpy**        | Cálculos financeiros vetorizados.               |
+| Tech                       | Descrição                                                       |
+| :------------------------- | :-------------------------------------------------------------- |
+| **Python 3.11+ / FastAPI** | API RESTful assíncrona com validação Pydantic v2.               |
+| **Gemini / Ollama**        | Engine de Inteligência Artificial Híbrida (Vision OCR + SLMs).  |
+| **SQLAlchemy / Alembic**   | ORM relacional (SQLite / PostgreSQL) com controle de migrações. |
+| **APScheduler**            | Agendador de tarefas de mercado e envio de e-mails/webhooks.    |
+| **WeasyPrint / OpenPyXL**  | Geradores de relatórios em PDF e planilhas IRPF.                |
 
 ### Frontend
 
@@ -158,7 +160,7 @@ npm run dev
 
 ## 🛡️ Segurança
 
-> [!WARNING] 
+> [!WARNING]
 > Atenção: Este projeto foi desenvolvido para uso pessoal local.
 
 A chave de criptografia (`SECRET_KEY`) presente nos arquivos de configuração padrão deve ser alterada imediatamente caso você pretenda fazer o deploy em um ambiente de produção ou exposto à internet.

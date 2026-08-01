@@ -10,12 +10,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from app.db.session import Base
-import uuid
 from datetime import datetime
-
-
-def generate_uuid():
-    return str(uuid.uuid4())
+from app.core.utils import generate_uuid
 
 
 class Ativo(Base):
