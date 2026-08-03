@@ -119,11 +119,13 @@ Diferente de planilhas comuns, este sistema utiliza **lógica FIFO** para cálcu
     cd personal-finance-manager
     ```
 
-2.  **Configure o Ambiente:**
-    Crie um arquivo `.env` na pasta `backend/` (opcional para o bot):
-
-    ```env
-    TELEGRAM_BOT_TOKEN=seu_token_aqui
+2. **Prepare o Ambiente:**
+   ```bash
+   # Crie o arquivo de ambiente do backend
+   cp backend/.env.example backend/.env
+   
+   # Configure o Gateway (Caddy)
+   cp Caddyfile.example Caddyfile
     ```
 
 3.  **Execute o container:**
@@ -133,8 +135,7 @@ Diferente de planilhas comuns, este sistema utiliza **lógica FIFO** para cálcu
     ```
 
 4.  **Acesse a aplicação:**
-    - 📱 Frontend: `http://localhost:5173`
-    - ⚙️ API Docs: `http://localhost:8000/docs`
+    - 📱 Site: `http://localhost:8080`
 
 ### Instalação Manual (Dev)
 
