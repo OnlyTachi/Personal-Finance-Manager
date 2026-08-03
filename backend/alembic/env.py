@@ -1,38 +1,31 @@
+# alembic/env.py
 from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# --- IMPORTAÇÕES DO SEU PROJETO ---
-import os
-import sys
-
-sys.path.append(os.getcwd())
-
+# 1. Importa as configurações do projeto e a Base do SQLAlchemy
 from app.core.config import settings
 from app.db.session import Base
-from app.modules.auth.models import User
-from app.modules.investments.models import Ativo, Transacao, Passivo
-from app.modules.history.models import Snapshot
 
-# ----------------------------------
+# 2. Importa TODOS os modelos para garantir que o --autogenerate enxergue as tabelas
+from app.modules.auth import models as auth_models
+from app.modules.investments import models as inv_models
+from app.modules.history import models as history_models
+from app.modules.cashflow import models as cashflow_models
+from app.modules.gamification import models as gamification_models
+from app.modules.email import models as email_models
+from app.modules.reports import models as reports_models
+from app.modules.notifications import models as notification_models
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# Configuração do Alembic
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
-# Overwrite the sqlalchemy.url in alembic.ini with the one from settings
+# Sobrescreve a opção sqlalchemy.url dinamicamente com a URL do projeto (.env / settings)
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
+if config.config_file_name:
+    fileConfig(config.config_file_name)
+
 target_metadata = Base.metadata
 
 
@@ -44,7 +37,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
+        render_as_batch=True,  # Habilita suporte a migrações em lote (essencial para SQLite)
     )
 
     with context.begin_transaction():
@@ -61,7 +54,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, render_as_batch=True
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,  # Habilita suporte a migrações em lote (essencial para SQLite)
         )
 
         with context.begin_transaction():

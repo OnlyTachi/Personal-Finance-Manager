@@ -1,25 +1,23 @@
-# Usa uma imagem leve do Python
-FROM python:3.12-slim
+FROM python:3.11-slim
 
-# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Instala dependências do sistema necessárias para compilar alguns pacotes Python (opcional, mas recomendado)
-RUN apt-get update && apt-get install -y \
-    gcc libpq-dev tesseract-ocr libtesseract-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip \
+    python3-cffi \
+    python3-brotli \
+    libpango-1.0-0 \
+    pango1.0-tools \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia o requirements.txt primeiro (para aproveitar o cache do Docker)
 COPY requirements.txt .
 
-# Instala as dependências (O Docker cria seu próprio ambiente aqui)
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copia todo o resto do código para dentro do container
-COPY . .
-
-# Expõe a porta 8000
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+COPY . /app
 EXPOSE 8000
-
-# Comando para rodar o servidor
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

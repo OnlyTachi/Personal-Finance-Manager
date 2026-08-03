@@ -25,6 +25,10 @@ class User(Base):
         "TelegramDevice", back_populates="user", cascade="all, delete-orphan"
     )
 
+    discord_devices = relationship(
+        "DiscordDevice", back_populates="user", cascade="all, delete-orphan"
+    )
+
 
 class TelegramDevice(Base):
     __tablename__ = "telegram_devices"
@@ -44,3 +48,13 @@ class UserPreference(Base):
     username = Column(String, index=True)
     pref_key = Column(String)
     pref_value = Column(String)
+
+
+class DiscordDevice(Base):
+    __tablename__ = "discord_devices"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.username"))
+    discord_id = Column(String, unique=True, index=True)
+    device_name = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user = relationship("User", back_populates="discord_devices")

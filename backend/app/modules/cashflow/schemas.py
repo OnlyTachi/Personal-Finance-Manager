@@ -1,6 +1,29 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime
+
+
+class BudgetLimitBase(BaseModel):
+    categoria: str
+    limite_mensal: float
+
+
+class BudgetLimitCreate(BudgetLimitBase):
+    pass
+
+
+class BudgetLimitUpdate(BaseModel):
+    limite_mensal: float
+
+
+class BudgetLimitResponse(BudgetLimitBase):
+    id: str
+    owner_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class MovimentacaoBase(BaseModel):
@@ -37,39 +60,3 @@ class Movimentacao(MovimentacaoBase):
 
     class Config:
         from_attributes = True
-
-
-class TransactionPreview(BaseModel):
-    data_temp: str
-    descricao: str
-    valor: float
-    categoria_sugerida: str
-    hash_id: Optional[str] = None
-    historico: Optional[str] = None
-
-
-class BulkImportRequest(BaseModel):
-    transactions: List[TransactionPreview]
-
-
-# --- Schemas de Mapeamento CSV ---
-
-
-class AnalyzeResponse(BaseModel):
-    file_token: str
-    headers: List[str]
-    sample_rows: List[List[Any]]
-
-
-class ColumnMapping(BaseModel):
-    date_col: str
-    amount_col: str
-    description_col: str
-    history_col: Optional[str] = None
-    memo_col: Optional[str] = None
-    use_history_for_ai: Optional[bool] = False
-
-
-class MapRequest(BaseModel):
-    file_token: str
-    mapping: ColumnMapping

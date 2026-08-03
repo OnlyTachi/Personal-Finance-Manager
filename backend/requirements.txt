@@ -8,7 +8,6 @@ bcrypt>=4.0.1
 python-multipart
 pandas
 numpy
-python-bcb
 yfinance
 requests
 alembic
@@ -24,3 +23,8 @@ python-dotenv
 openpyxl
 pdfplumber
 google-generativeai
+beautifulsoup4
+email-validator
+weasyprint
+discord.py>=2.3.0
+jinja2>=3.1.2

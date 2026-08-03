@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; margin: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 24px; border: 1px solid #334155;">
+        <div style="text-align: center; border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px;">
+            <h2 style="color: #38bdf8; margin: 0; font-size: 20px;">Relatório Personalizado</h2>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Período: {{ data.periodo.inicio }} a {{ data.periodo.fim }}</p>
+        </div>
+
+        <div style="background-color: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 4px 0; color: #cbd5e1;">Entradas: <strong style="color: #10b981;">R$ {{ "%.2f"|format(data.resumo.total_entradas) }}</strong></p>
+            <p style="margin: 4px 0; color: #cbd5e1;">Saídas: <strong style="color: #ef4444;">R$ {{ "%.2f"|format(data.resumo.total_saidas) }}</strong></p>
+            <p style="margin: 4px 0; color: #cbd5e1;">Saldo Líquido do Período: <strong>R$ {{ "%.2f"|format(data.resumo.saldo_periodo) }}</strong></p>
+            <p style="margin: 4px 0; color: #64748b; font-size: 11px;">Total de lançamentos: {{ data.resumo.qtd_transacoes }}</p>
+        </div>
+
+        <h3 style="color: #f8fafc; font-size: 14px; margin-bottom: 8px;">Detalhamento por Categoria</h3>
+        <table style="width: 100%; margin-bottom: 16px; border-collapse: collapse;">
+            {% for c in data.categorias %}
+            <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #1e293b; color: #cbd5e1; font-size: 13px;">{{ c.categoria }}</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #1e293b; color: #f8fafc; font-weight: bold; font-size: 13px; text-align: right;">R$ {{ "%.2f"|format(c.valor) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

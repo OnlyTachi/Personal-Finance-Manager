@@ -7,38 +7,10 @@ from app.modules.cashflow.models import Movimentacao
 from datetime import date, datetime, timedelta
 import math
 import logging
+from app.core import market_data
 
 # Configuração de Logger
 logger = logging.getLogger(__name__)
-
-
-def get_current_cdi_rate() -> float:
-    fallback_rate = 11.25
-    try:
-        from bcb import sgs
-
-        df = sgs.get({"selic": 432}, last=1)
-        if not df.empty:
-            rate = float(df["selic"].iloc[-1])
-            logger.info(f"Taxa CDI/Selic atualizada automaticamente via BCB: {rate}%")
-            return rate
-    except Exception as e:
-        logger.warning(
-            f"Erro ao buscar taxa CDI no BCB (usando fallback {fallback_rate}%): {str(e)}"
-        )
-    return fallback_rate
-
-
-CURRENT_CDI_RATE = get_current_cdi_rate()
-
-
-def update_cdi_rate_variable():
-    global CURRENT_CDI_RATE
-    new_rate = get_current_cdi_rate()
-    if new_rate > 0:
-        CURRENT_CDI_RATE = new_rate
-        logger.info(f"Scheduler: Taxa CDI Global atualizada para {CURRENT_CDI_RATE}%")
-
 
 TABELA_IOF = {
     0: 100,
@@ -114,7 +86,7 @@ def update_asset_balance(db: Session, asset: models.Ativo):
 
     taxa_efetiva = asset.valor_taxa
     if asset.tipo_indexador == "CDI":
-        taxa_efetiva = CURRENT_CDI_RATE * (asset.valor_taxa / 100.0)
+        taxa_efetiva = market_data.get_current_cdi() * (asset.valor_taxa / 100.0)
 
     transacoes = (
         db.query(models.Transacao)
@@ -255,7 +227,7 @@ def simulate_withdrawal_fifo(
 
     taxa_efetiva = asset.valor_taxa
     if asset.tipo_indexador == "CDI":
-        taxa_efetiva = CURRENT_CDI_RATE * (asset.valor_taxa / 100.0)
+        taxa_efetiva = market_data.get_current_cdi() * (asset.valor_taxa / 100.0)
 
     transacoes = (
         db.query(models.Transacao)
@@ -450,6 +422,11 @@ def update_goal(db: Session, goal_id: str, goal_in: schemas.GoalUpdate, user_id:
     if not goal:
         raise Exception("Meta não encontrada")
 
+    from app.modules.notifications import service as notif_service
+
+    if goal.valor_atual >= goal.valor_alvo:
+        notif_service.check_goal_reached_alerts(db, user_id, goal.nome, goal.valor_alvo)
+
     update_data = goal_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(goal, key, value)
@@ -473,177 +450,38 @@ def delete_goal(db: Session, goal_id: str, user_id: str):
     return {"message": "Meta excluída"}
 
 
-def get_couple_goals(db: Session, user_username: str, partner_username: str = None):
-    """
-    Retorna as metas do usuário E do parceiro, se houver.
-    """
-    owners = [user_username]
-    if partner_username:
-        owners.append(partner_username)
+def update_asset(db: Session, asset_id: str, asset_in: schemas.AtivoUpdate):
+    asset = get_asset_by_id(db, asset_id)
+    if not asset:
+        raise Exception("Ativo não encontrado")
 
-    return db.query(models.Goal).filter(models.Goal.owner_id.in_(owners)).all()
+    update_data = asset_in.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(asset, key, value)
 
-
-# --- Lógica de Casal ---
-
-
-def calculate_settlement(user_spent: float, partner_spent: float) -> dict:
-    """
-    Calcula quem deve a quem baseado nos gastos compartilhados.
-    Função pura para facilitar testes unitários.
-    """
-    val_u = abs(user_spent)
-    val_p = abs(partner_spent)
-
-    total_shared = val_u + val_p
-    fair_share = total_shared / 2
-
-    # Se user pagou mais que a parte justa, ele tem saldo positivo (recebe)
-    # Se pagou menos, tem saldo negativo (deve)
-    balance = val_u - fair_share
-
-    return {
-        "total_paid_by_user": val_u,
-        "total_paid_by_partner": val_p,
-        "total_shared_expenses": total_shared,
-        "fair_share_per_person": fair_share,
-        "value": balance,  # Positivo = Recebe, Negativo = Deve
-    }
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+    return asset
 
 
-def get_couple_dashboard_data(db: Session, user_username: str, partner_username: str):
-    """
-    Agrega dados do usuário E do parceiro para o dashboard compartilhado.
-    Retorna apenas se ambos se tiverem como parceiros (link mútuo).
-    """
+def update_transaction(
+    db: Session, transaction_id: str, tx_in: schemas.TransacaoUpdate
+):
+    t = db.query(models.Transacao).filter(models.Transacao.id == transaction_id).first()
+    if not t:
+        raise Exception("Transação não encontrada")
 
-    # Busca ativos e passivos do usuário
-    user_assets = (
-        db.query(models.Ativo).filter(models.Ativo.owner_id == user_username).all()
-    )
-    user_passivos = (
-        db.query(models.Passivo).filter(models.Passivo.owner_id == user_username).all()
-    )
+    update_data = tx_in.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(t, key, value)
 
-    # Busca ativos e passivos do parceiro
-    partner_assets = (
-        db.query(models.Ativo).filter(models.Ativo.owner_id == partner_username).all()
-    )
-    partner_passivos = (
-        db.query(models.Passivo)
-        .filter(models.Passivo.owner_id == partner_username)
-        .all()
-    )
+    db.add(t)
+    db.commit()
 
-    # Totais Usuário
-    u_total_assets = sum(a.valor_atual_bruto for a in user_assets)
-    u_total_liabilities = sum(p.saldo_devedor for p in user_passivos)
+    asset = get_asset_by_id(db, t.ativo_id)
+    if asset:
+        update_asset_balance(db, asset)
 
-    # Totais Parceiro
-    p_total_assets = sum(a.valor_atual_bruto for a in partner_assets)
-    p_total_liabilities = sum(p.saldo_devedor for p in partner_passivos)
-
-    # Alocação Combinada
-    combined_allocation = {}
-    all_assets = user_assets + partner_assets
-
-    for asset in all_assets:
-        # Normalização de Categoria (Title Case para evitar 'acoes' vs 'Ações')
-        raw_cat = asset.categoria if asset.categoria else "Outros"
-        cat = raw_cat.title().strip()
-
-        if cat not in combined_allocation:
-            combined_allocation[cat] = 0.0
-        combined_allocation[cat] += asset.valor_atual_bruto
-
-    # --- LÓGICA: Cálculo de Settlement (Splitwise simplificado) ---
-    today = datetime.now()
-
-    # Busca gastos compartilhados do Usuário
-    user_shared_spent = (
-        db.query(func.sum(Movimentacao.valor))
-        .filter(
-            Movimentacao.owner_id == user_username,
-            Movimentacao.shared == True,
-            Movimentacao.valor < 0,  # Apenas saídas
-            extract("month", Movimentacao.data) == today.month,
-            extract("year", Movimentacao.data) == today.year,
-        )
-        .scalar()
-        or 0.0
-    )
-
-    # Busca gastos compartilhados do Parceiro
-    partner_shared_spent = (
-        db.query(func.sum(Movimentacao.valor))
-        .filter(
-            Movimentacao.owner_id == partner_username,
-            Movimentacao.shared == True,
-            Movimentacao.valor < 0,  # Apenas saídas
-            extract("month", Movimentacao.data) == today.month,
-            extract("year", Movimentacao.data) == today.year,
-        )
-        .scalar()
-        or 0.0
-    )
-
-    # Usa a função auxiliar refatorada
-    settlement_data = calculate_settlement(user_shared_spent, partner_shared_spent)
-
-    return {
-        "user": {
-            "username": user_username,
-            "total_assets": u_total_assets,
-            "total_liabilities": u_total_liabilities,
-            "net_worth": u_total_assets - u_total_liabilities,
-        },
-        "partner": {
-            "username": partner_username,
-            "total_assets": p_total_assets,
-            "total_liabilities": p_total_liabilities,
-            "net_worth": p_total_assets - p_total_liabilities,
-        },
-        "combined": {
-            "total_assets": u_total_assets + p_total_assets,
-            "total_liabilities": u_total_liabilities + p_total_liabilities,
-            "net_worth": (u_total_assets + p_total_assets)
-            - (u_total_liabilities + p_total_liabilities),
-            "allocation": combined_allocation,
-        },
-        "settlement": settlement_data,
-    }
-
-
-def get_couple_history_data(db: Session, user_username: str, partner_username: str):
-    """
-    Combina o histórico diário (snapshots) de dois usuários.
-    Soma os valores quando as datas coincidem.
-    """
-    hist_u = db.query(Snapshot).filter(Snapshot.owner_id == user_username).all()
-    hist_p = db.query(Snapshot).filter(Snapshot.owner_id == partner_username).all()
-
-    # Dicionário para merge por data: { date_obj: {bruto: 0, investido: 0} }
-    merged = {}
-
-    def process(hist_list):
-        for snap in hist_list:
-            d = snap.timestamp.date()  # Agrupa por dia
-            if d not in merged:
-                merged[d] = {"bruto": 0.0, "investido": 0.0}
-            merged[d]["bruto"] += snap.valor_total_bruto
-            merged[d]["investido"] += snap.valor_total_investido or 0.0
-
-    process(hist_u)
-    process(hist_p)
-
-    # Converte para lista ordenada
-    result = []
-    for d in sorted(merged.keys()):
-        result.append(
-            {
-                "timestamp": d.strftime("%Y-%m-%dT%H:%M:%S"),
-                "valor_total_bruto": round(merged[d]["bruto"], 2),
-                "valor_total_investido": round(merged[d]["investido"], 2),
-            }
-        )
-    return result
+    db.refresh(t)
+    return t

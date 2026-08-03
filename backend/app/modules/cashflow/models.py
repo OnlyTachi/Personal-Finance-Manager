@@ -1,13 +1,32 @@
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 from datetime import datetime
-import uuid
+from app.core.utils import generate_uuid
+from sqlalchemy import (
+    Column,
+    String,
+    Float,
+    DateTime,
+    ForeignKey,
+    UniqueConstraint,
+    Boolean,
+)
+from sqlalchemy.sql import func
 
 
-# Função para gerar UUIDs únicos
-def generate_uuid():
-    return str(uuid.uuid4())
+class BudgetLimitDB(Base):
+    __tablename__ = "budget_limits"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    owner_id = Column(String, ForeignKey("users.username"), nullable=False)
+    categoria = Column(String, nullable=False)
+    limite_mensal = Column(Float, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("owner_id", "categoria", name="uix_owner_categoria"),
+    )
 
 
 class Movimentacao(Base):
@@ -29,8 +48,8 @@ class Movimentacao(Base):
     fitid = Column(String, nullable=True, unique=True)
     conciliado = Column(Boolean, default=False)
 
-    # --- NOVO: Casal / Splitwise ---
-    shared = Column(Boolean, default=False)  # Se True, entra no cálculo de divisão
+    # --- Casal / Splitwise ---
+    shared = Column(Boolean, default=False)
 
     # Metadados
     comprovante_url = Column(String, nullable=True)
@@ -38,9 +57,6 @@ class Movimentacao(Base):
 
     owner = relationship("app.modules.auth.models.User")
 
-    # --- Propriedade Auxiliar para o Frontend ---
-    # Isso permite que o campo 'historico' do Schema seja preenchido
-    # automaticamente com o valor de 'observacao'
     @property
     def historico(self):
         return self.observacao
