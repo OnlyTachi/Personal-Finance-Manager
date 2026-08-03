@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # Integrações
     TELEGRAM_BOT_TOKEN: Optional[str] = None
+    DISCORD_BOT_TOKEN: Optional[str] = None
 
     # --- Configuração de IA Híbrida ---
     # Tier 1: Gemini (Nuvem - Opcional/Futuro)
